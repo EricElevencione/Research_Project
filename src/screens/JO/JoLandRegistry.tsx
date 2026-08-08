@@ -896,7 +896,6 @@ const JoLandRegistry: React.FC = () => {
 
   const refreshLandParcels = useCallback(async () => {
     setLoading(true);
-    console.log("[FETCH START] Starting refresh...");
 
     try {
       const [unifiedResult, submissionResult] = await Promise.all([
@@ -979,16 +978,10 @@ const JoLandRegistry: React.FC = () => {
       // Sort combined data by farmer_name
       combinedData.sort((a, b) => a.farmer_name.localeCompare(b.farmer_name));
 
-      console.log("[FETCH SUCCESS] Combined data received:", combinedData);
       const normalizedData = normalizeCurrentOwnershipGroups(combinedData);
       setAggregatedFarmers(normalizedData);
-      console.log(
-        "[STATE SET] Set aggregatedFarmers to length:",
-        normalizedData.length || 0,
-      );
     } finally {
       setLoading(false);
-      console.log("[FETCH END] Loading set to false");
     }
   }, []);
 
@@ -1078,7 +1071,6 @@ const JoLandRegistry: React.FC = () => {
         .eq("is_current", true);
 
       if (historyErr) {
-        console.warn("History update warning (non-fatal):", historyErr.message);
       }
 
       if (farmerId) {
@@ -1171,7 +1163,6 @@ const JoLandRegistry: React.FC = () => {
         .eq("farm_parcel_id", parcelId);
 
       if (historyErr) {
-        console.warn("History update warning (non-fatal):", historyErr.message);
       }
 
       if (farmerId) {
@@ -1233,7 +1224,6 @@ const JoLandRegistry: React.FC = () => {
         .eq("farm_parcel_id", parcelId);
 
       if (historyErr) {
-        console.warn("History update warning (non-fatal):", historyErr.message);
       }
 
       if (farmerId) {
@@ -1268,7 +1258,6 @@ const JoLandRegistry: React.FC = () => {
 
   // Fetch all land parcels and unused parcels
   useEffect(() => {
-    console.log("Fetching aggregated farmers and unused parcels...");
     refreshLandParcels();
     fetchUnusedParcels();
   }, [refreshLandParcels, fetchUnusedParcels]);
@@ -1509,27 +1498,19 @@ const JoLandRegistry: React.FC = () => {
     selectedParcelIds?: number[],
     rowId?: string,
   ) => {
-    console.log(
-      "handleFarmerSelect called for:",
-      group.farmer_name,
-      group.farmer_id,
-    );
 
     setSelectedFarmer(group);
     setSelectedFarmerViewRole(rowOwnership);
     if (rowId) setSelectedRegistryRowId(rowId);
-    console.log("setSelectedFarmer called");
 
     const parcelIds =
       selectedParcelIds && selectedParcelIds.length > 0
         ? selectedParcelIds
         : group.parcels.map((p) => p.id);
 
-    console.log("Fetching history for parcel IDs:", parcelIds);
 
     if (parcelIds.length === 0) {
       setParcelHistory([]);
-      console.log("No parcel IDs found for selected row.");
     }
 
     const pNumbers = group.parcels
@@ -1540,7 +1521,6 @@ const JoLandRegistry: React.FC = () => {
 
     setOpenActionMenuRowId(null);
     setShowModal(true);
-    console.log("setShowModal(true) called");
   };
 
   const handleRowActionView = (row: RegistryDisplayRow) => {
@@ -1758,8 +1738,7 @@ const JoLandRegistry: React.FC = () => {
           transferred_area_ha: addParcelInputs.reduce((sum, p) => sum + (Number(p.totalAreaHa) || 0), 0)
         });
 
-      if (logTransferErr) console.warn("Could not log ownership transfer record (non-blocking):", logTransferErr.message);
-
+      if (logTransferErr)
       // Refresh list
       await refreshLandParcels();
 
@@ -2634,16 +2613,9 @@ const JoLandRegistry: React.FC = () => {
                 .in("id", oldParcelIds)
                 .eq("submission_id", holderFarmerId);
 
-              console.log(
-                `[OwnerAffiliation] Cleaned up ${oldParcelIds.length} old parcel(s) from previous owner(s).`,
-              );
             }
           } catch (cleanupErr: any) {
             // Cleanup failure is non-fatal — the main assignment succeeded.
-            console.warn(
-              "[OwnerAffiliation] Old parcel cleanup failed (non-fatal):",
-              cleanupErr?.message || cleanupErr,
-            );
           }
         }
       }
@@ -4301,10 +4273,6 @@ const JoLandRegistry: React.FC = () => {
           },
         );
         if (relinkError) {
-          console.warn(
-            "Transfer succeeded but tenant/lessee re-link failed:",
-            relinkError.message,
-          );
         }
       }
 

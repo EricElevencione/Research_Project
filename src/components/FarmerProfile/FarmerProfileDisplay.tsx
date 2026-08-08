@@ -16,7 +16,6 @@ const getGisAreaHa = (geometry: any): number | null => {
       return areaM2 / 10000;
     }
   } catch (err) {
-    console.warn("getGisAreaHa error:", err);
   }
   return null;
 };
@@ -44,11 +43,11 @@ export interface UnifiedParcel {
 
   /** The profile person's role on this parcel */
   role:
-    | "owner-farmed"
-    | "land-owner"
-    | "tenant"
-    | "lessee"
-    | "tenant+lessee";
+  | "owner-farmed"
+  | "land-owner"
+  | "tenant"
+  | "lessee"
+  | "tenant+lessee";
 
   /** Detailed occupant list — for owners: tenants/lessees; for tenants: the land owner */
   occupants: OccupantInfo[];
@@ -184,7 +183,7 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
                 plotItem.parcel_number &&
                 p.parcelNumber &&
                 plotItem.parcel_number.trim().toLowerCase() ===
-                  p.parcelNumber.trim().toLowerCase(),
+                p.parcelNumber.trim().toLowerCase(),
             );
             const resolvedPlot =
               plot ||
@@ -200,10 +199,6 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
           setParcelsWithGeom(updated);
         }
       } catch (err) {
-        console.warn(
-          "Error loading geometries inside FarmerProfileDisplay:",
-          err,
-        );
       }
     };
 
@@ -258,7 +253,7 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64Data = reader.result as string;
-        
+
         // Target ID safely whether string, UUID, or integer
         const targetId =
           typeof farmer.id === "string" && !isNaN(Number(farmer.id)) && !farmer.id.includes("-")
@@ -410,7 +405,7 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
             onChange={handleFileChange}
             disabled={isUpdatingPic}
           />
-          
+
           <div className="farmer-profile-hero-details">
             <h2 className="farmer-profile-hero-name">{farmer.name || "Unnamed Farmer"}</h2>
             <span className="farmer-profile-hero-role">{headerSubtitle}</span>
@@ -524,16 +519,16 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
             </div>
             {((farmer.farmingActivities ?? []).length > 0 ||
               farmer.mainLivelihood) && (
-              <div className="farmer-modal-info-item farmer-modal-full-width">
-                <span className="farmer-modal-label">Main Livelihood:</span>
-                <span className="farmer-modal-value">
-                  {farmer.farmingActivities &&
-                  farmer.farmingActivities.length > 0
-                    ? farmer.farmingActivities.join(", ")
-                    : farmer.mainLivelihood || "—"}
-                </span>
-              </div>
-            )}
+                <div className="farmer-modal-info-item farmer-modal-full-width">
+                  <span className="farmer-modal-label">Main Livelihood:</span>
+                  <span className="farmer-modal-value">
+                    {farmer.farmingActivities &&
+                      farmer.farmingActivities.length > 0
+                      ? farmer.farmingActivities.join(", ")
+                      : farmer.mainLivelihood || "—"}
+                  </span>
+                </div>
+              )}
           </div>
         </div>
 
@@ -643,8 +638,8 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
                           {typeof parcel.totalFarmAreaHa === "number"
                             ? parcel.totalFarmAreaHa.toFixed(4)
                             : parseFloat(
-                                String(parcel.totalFarmAreaHa || 0),
-                              ).toFixed(4)}{" "}
+                              String(parcel.totalFarmAreaHa || 0),
+                            ).toFixed(4)}{" "}
                           ha
                         </span>
                       </div>

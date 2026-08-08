@@ -281,9 +281,9 @@ const ManageRequests: React.FC = () => {
       // Calculate totals
       const totalFertilizer = Math.round(
         (Number(request.requested_urea_bags) || 0) +
-          (Number(request.requested_complete_14_bags) || 0) +
-          (Number(request.requested_ammonium_sulfate_bags) || 0) +
-          (Number(request.requested_muriate_potash_bags) || 0),
+        (Number(request.requested_complete_14_bags) || 0) +
+        (Number(request.requested_ammonium_sulfate_bags) || 0) +
+        (Number(request.requested_muriate_potash_bags) || 0),
       );
 
       const totalSeeds = Number(
@@ -311,7 +311,6 @@ const ManageRequests: React.FC = () => {
       const distResponse = await createDistributionRecord(payload);
 
       if (!distResponse.error) {
-        console.log("✅ Distribution log created automatically");
       } else {
         console.error("❌ Failed to create distribution log");
       }
@@ -554,62 +553,6 @@ const ManageRequests: React.FC = () => {
 
     // Debug logging
     if (hasStatus(request, "pending")) {
-      console.log(`🔍 Shortage Check for ${request.farmer_name}:`, {
-        fertilizers: {
-          urea: {
-            requested: requestedUrea,
-            remaining: remainingUrea,
-            shortage: requestedUrea > remainingUrea,
-          },
-          complete: {
-            requested: requestedComplete,
-            remaining: remainingComplete,
-            shortage: requestedComplete > remainingComplete,
-          },
-          amSul: {
-            requested: requestedAmSul,
-            remaining: remainingAmSul,
-            shortage: requestedAmSul > remainingAmSul,
-          },
-          potash: {
-            requested: requestedPotash,
-            remaining: remainingPotash,
-            shortage: requestedPotash > remainingPotash,
-          },
-        },
-        seeds: {
-          jackpot: {
-            requested: requestedJackpot,
-            remaining: remainingJackpot,
-            shortage: requestedJackpot > remainingJackpot,
-          },
-          us88: {
-            requested: requestedUs88,
-            remaining: remainingUs88,
-            shortage: requestedUs88 > remainingUs88,
-          },
-          th82: {
-            requested: requestedTh82,
-            remaining: remainingTh82,
-            shortage: requestedTh82 > remainingTh82,
-          },
-          rh9000: {
-            requested: requestedRh9000,
-            remaining: remainingRh9000,
-            shortage: requestedRh9000 > remainingRh9000,
-          },
-          lumping143: {
-            requested: requestedLumping143,
-            remaining: remainingLumping143,
-            shortage: requestedLumping143 > remainingLumping143,
-          },
-          lp296: {
-            requested: requestedLp296,
-            remaining: remainingLp296,
-            shortage: requestedLp296 > remainingLp296,
-          },
-        },
-      });
     }
 
     // Return true if any fertilizer OR seed shortage exists
@@ -745,13 +688,13 @@ const ManageRequests: React.FC = () => {
                     <span className="admin-req-stat-value fertilizers">
                       {allocation
                         ? FERTILIZER_FIELD_MAPS.reduce((sum, map) => {
-                            return (
-                              sum +
-                              (Number(
-                                (allocation as any)[map.allocationField],
-                              ) || 0)
-                            );
-                          }, 0).toFixed(2)
+                          return (
+                            sum +
+                            (Number(
+                              (allocation as any)[map.allocationField],
+                            ) || 0)
+                          );
+                        }, 0).toFixed(2)
                         : "0.00"}{" "}
                       bags
                     </span>
@@ -763,13 +706,13 @@ const ManageRequests: React.FC = () => {
                     <span className="admin-req-stat-value seeds">
                       {allocation
                         ? SEED_FIELD_MAPS.reduce((sum, map) => {
-                            return (
-                              sum +
-                              (Number(
-                                (allocation as any)[map.allocationField],
-                              ) || 0)
-                            );
-                          }, 0).toFixed(2)
+                          return (
+                            sum +
+                            (Number(
+                              (allocation as any)[map.allocationField],
+                            ) || 0)
+                          );
+                        }, 0).toFixed(2)
                         : "0.00"}{" "}
                       kg
                     </span>
@@ -995,26 +938,26 @@ const ManageRequests: React.FC = () => {
                 {filteredRequests.filter(
                   (r) => hasStatus(r, "pending") && checkPotentialShortage(r),
                 ).length > 0 && (
-                  <div className="admin-req-info-box">
-                    <span style={{ fontSize: "24px" }}>💡</span>
-                    <div style={{ flex: 1 }}>
-                      <strong style={{ color: "#92400e", fontSize: "14px" }}>
-                        Alternatives Auto-Loaded & Available
-                      </strong>
-                      <p
-                        style={{
-                          margin: "4px 0 0 0",
-                          fontSize: "13px",
-                          color: "#78350f",
-                        }}
-                      >
-                        Rows highlighted in yellow (⚠️) have detected shortages.
-                        Alternative fertilizer and seed options have been
-                        automatically loaded based on agronomic equivalency.
-                      </p>
+                    <div className="admin-req-info-box">
+                      <span style={{ fontSize: "24px" }}>💡</span>
+                      <div style={{ flex: 1 }}>
+                        <strong style={{ color: "#92400e", fontSize: "14px" }}>
+                          Alternatives Auto-Loaded & Available
+                        </strong>
+                        <p
+                          style={{
+                            margin: "4px 0 0 0",
+                            fontSize: "13px",
+                            color: "#78350f",
+                          }}
+                        >
+                          Rows highlighted in yellow (⚠️) have detected shortages.
+                          Alternative fertilizer and seed options have been
+                          automatically loaded based on agronomic equivalency.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 <div style={{ overflowX: "auto" }}>
                   <table

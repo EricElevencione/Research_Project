@@ -36,7 +36,6 @@ const FitToGeometry: React.FC<{ geometry: any | null }> = ({ geometry }) => {
         map.fitBounds(bounds, { padding: [16, 16], maxZoom: 18 });
       }
     } catch (err) {
-      console.warn("ParcelGeometryPreview: could not fit bounds:", err);
     }
   }, [geometry, map]);
 

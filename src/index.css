@@ -1,11 +1,5 @@
 @import "./assets/css/responsiveTables.css";
 
-@font-face {
-  font-family: "Poppins Light";
-  src: url("../assets/components/common/font-family/Poppins/Poppins-Light.ttf")
-    format("truetype");
-}
-
 /* Your custom CSS variables and base styles */
 :root {
   --primary-color: #4bc1c5;
@@ -17,7 +11,7 @@
   --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 
   /* Global Font Family - Change this one variable to update all fonts */
-  --font-family: "Poppins Light", Arial, sans-serif;
+  --font-family: Arial, sans-serif;
 }
 
 * {

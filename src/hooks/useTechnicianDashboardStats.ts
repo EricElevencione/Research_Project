@@ -81,16 +81,9 @@ export const useTechnicianDashboardStats = (): TechnicianDashboardData => {
                 'Tabucan', 'Talusan', 'Tambobo', 'Tamboilan', 'Victorias',
             ];
 
-            console.log('=== Technician Dashboard Debug ===');
-            console.log('Submissions fetched:', submissions.length);
             if (submissions.length > 0) {
-                console.log('Sample submission:', submissions[0]);
-                console.log('Submission keys:', Object.keys(submissions[0]));
             }
-            console.log('Land plots fetched:', landPlots.length);
             if (landPlots.length > 0) {
-                console.log('Sample land plot:', landPlots[0]);
-                console.log('Land plot keys:', Object.keys(landPlots[0]));
             }
 
             // Try to figure out the farmer name field from submissions
@@ -101,53 +94,47 @@ export const useTechnicianDashboardStats = (): TechnicianDashboardData => {
                 if (keys.includes('farmer_name')) farmerNameField = 'farmer_name';
             }
 
-            console.log('Using farmer name field:', farmerNameField);
 
             // Build a set of farmer names that have plotted parcels
             const plottedFarmerNames = new Set<string>();
             landPlots.forEach(p => {
                 // Try different name field combinations
-                let name = p.farmer_name || 
+                let name = p.farmer_name ||
                     [p.first_name, p.middle_name, p.surname].filter((n: any) => n).join(' ') ||
                     `${p.FIRST_NAME || ''} ${p.MIDDLE_NAME || ''} ${p.LAST_NAME || ''}`.trim();
-                
+
                 // Also store alternative formats - last name | first+middle
                 if (name && name.trim()) {
                     const normalized = name.toLowerCase().trim();
                     plottedFarmerNames.add(normalized);
-                    console.log(`Added plotted farmer: "${name}" -> "${normalized}"`);
                 }
             });
 
-            console.log('Total plotted farmers found:', plottedFarmerNames.size);
-            console.log('Plotted farmer names:', Array.from(plottedFarmerNames));
 
             // ── Calculate unplotted farmers ────────────────────────
             const unplotted = submissions.filter(s => {
-                let submissionName = s.farmer_name || 
+                let submissionName = s.farmer_name ||
                     [s['FIRST NAME'], s['MIDDLE NAME'], s['LAST NAME']].filter(n => n).join(' ') ||
                     `${s.FIRST_NAME || ''} ${s.MIDDLE_NAME || ''} ${s.LAST_NAME || ''}`.trim();
                 submissionName = submissionName.toLowerCase().trim();
                 const isUnplotted = !plottedFarmerNames.has(submissionName);
-                console.log(`Checking farmer "${submissionName}": ${isUnplotted ? 'UNPLOTTED' : 'plotted'}`);
                 return isUnplotted;
             });
-            
+
             const unplottedFarmers: UnplottedFarmer[] = unplotted.map((s, idx) => {
-                const name = s.farmer_name || 
+                const name = s.farmer_name ||
                     [s['FIRST NAME'], s['MIDDLE NAME'], s['LAST NAME']].filter((n: any) => n).join(' ') ||
                     `${s.FIRST_NAME || ''} ${s.MIDDLE_NAME || ''} ${s.LAST_NAME || ''}`.trim() ||
                     'N/A';
                 const barangay = s.BARANGAY || s.barangay || 'Unknown';
                 const farmLocation = s['FARM LOCATION'] || s.farm_location || 'N/A';
-                
+
                 // Check if farm location is valid (in Dumangas barangays)
                 const hasInvalidAddress = farmLocation !== 'N/A' && !validBarangays.includes(farmLocation.trim());
-                
+
                 if (hasInvalidAddress) {
-                    console.log(`⚠️ Invalid farm location for farmer "${name}": "${farmLocation}" is not in Dumangas`);
                 }
-                
+
                 return {
                     id: s.id,
                     farmerName: name,
@@ -183,7 +170,7 @@ export const useTechnicianDashboardStats = (): TechnicianDashboardData => {
                     const farmLocation = s['FARM LOCATION'] || s.farm_location;
                     return farmLocation === barangay;
                 });
-                
+
                 // Count plotted parcels by barangay
                 const plottedInBarangay = landPlots.filter(p => {
                     const barangayVal = p.barangay || p.BARANGAY;
@@ -192,12 +179,11 @@ export const useTechnicianDashboardStats = (): TechnicianDashboardData => {
 
                 const farmerCount = farmersInBarangay.length;
                 const plottedParcelsCount = plottedInBarangay.length;
-                
+
                 // Log barangays with farmers for debugging
                 if (farmerCount > 0) {
-                    console.log(`Barangay "${barangay}": ${farmerCount} farmers farming here, ${plottedParcelsCount} plotted parcels`);
                 }
-                
+
                 const completionPercentage = farmerCount > 0 ? Math.round((plottedParcelsCount / farmerCount) * 100) : 0;
                 const isComplete = farmerCount > 0 && plottedParcelsCount >= farmerCount;
 

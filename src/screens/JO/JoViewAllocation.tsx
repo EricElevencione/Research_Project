@@ -439,7 +439,6 @@ const JoViewAllocation: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      console.log("🔍 Fetching allocation with ID:", allocationId);
 
       // Fetch allocation details
       const allocationResponse = await getAllocationById(allocationId || "0");
@@ -448,9 +447,7 @@ const JoViewAllocation: React.FC = () => {
       }
       const currentAllocation = allocationResponse.data || null;
       const allocations = currentAllocation ? [currentAllocation] : [];
-      console.log("📦 All allocations:", allocations);
 
-      console.log("🎯 Current allocation:", currentAllocation);
 
       if (!currentAllocation) {
         throw new Error("Allocation not found");

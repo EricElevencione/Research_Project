@@ -687,7 +687,6 @@ const TechManageRequests: React.FC = () => {
       const distResponse = await createDistributionRecord(payload);
 
       if (!distResponse.error) {
-        console.log("Γ£à Distribution log created automatically");
       } else {
         console.error("Γ¥î Failed to create distribution log");
       }

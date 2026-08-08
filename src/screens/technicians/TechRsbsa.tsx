@@ -371,12 +371,6 @@ const TechRsbsa: React.FC = () => {
 
       const data = response.data || [];
 
-      console.log(
-        "Received RSBSA data from Supabase:",
-        data?.length || 0,
-        "records",
-      );
-      console.log("Sample record:", data?.[0]);
 
       // Automatically filter for registered owners only
       const registeredOwnersData = filterRegisteredOwners(data || []);
@@ -423,7 +417,6 @@ const TechRsbsa: React.FC = () => {
 
   // Function to filter registered owners only (includes no-land owners so they can be shown with a warning)
   const filterRegisteredOwners = (records: RSBSARecord[]) => {
-    console.log("Filtering records:", records.length);
 
     const filtered = records.filter((record: any) => {
       // Check if the record represents a registered owner
@@ -434,7 +427,6 @@ const TechRsbsa: React.FC = () => {
       return false;
     });
 
-    console.log("Filtered results:", filtered.length, "out of", records.length);
     return filtered;
   };
 

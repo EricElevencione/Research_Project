@@ -489,11 +489,9 @@ const JoLandownerRegistry: React.FC = () => {
           "tenant_land_owner_id.not.is.null,lessee_land_owner_id.not.is.null",
         );
 
-      if (tlError)
-        console.warn(
-          "Tenant/lessee count fetch error (non-blocking):",
-          tlError.message,
-        );
+      if (tlError) {
+        // non-blocking
+      }
 
       const referencedOwnerIds = new Set<number>();
       ((tlParcels as FarmParcelRow[]) || []).forEach((p) => {
@@ -649,11 +647,9 @@ const JoLandownerRegistry: React.FC = () => {
           )
           .in("submission_id", ownerIds);
 
-        if (ownerParcelsError)
-          console.warn(
-            "Owner parcel fetch error (non-blocking):",
-            ownerParcelsError.message,
-          );
+        if (ownerParcelsError) {
+          // non-blocking
+        }
 
         // Build set of ownerIds that have at least one is_current_owner parcel
         const ownersWithActiveLand = new Set<string>();
@@ -710,10 +706,6 @@ const JoLandownerRegistry: React.FC = () => {
               ),
             );
           } catch (e) {
-            console.warn(
-              "Failed to update flagged landowner records status:",
-              e,
-            );
           }
         })();
       }
@@ -913,10 +905,6 @@ const JoLandownerRegistry: React.FC = () => {
           .select("*")
           .ilike("ffrs_id", ownerFfrsId);
         if (plotsByFfrsError) {
-          console.warn(
-            "Land plot fetch by ffrs_id error (non-blocking):",
-            plotsByFfrsError.message,
-          );
         } else {
           ownerPlots = (plotsByFfrs as LandPlotRow[]) || [];
         }
@@ -928,10 +916,6 @@ const JoLandownerRegistry: React.FC = () => {
           .ilike("first_name", ownerFirstName)
           .ilike("surname", ownerLastName);
         if (plotsByNameError) {
-          console.warn(
-            "Land plot fetch by name error (non-blocking):",
-            plotsByNameError.message,
-          );
         } else {
           ownerPlots = (plotsByName as LandPlotRow[]) || [];
         }
@@ -1019,10 +1003,6 @@ const JoLandownerRegistry: React.FC = () => {
             .or("ownership_type_tenant.eq.true,ownership_type_lessee.eq.true");
 
         if (tenantLesseeError) {
-          console.warn(
-            "Linked farmer lookup (tenant/lessee parcels) error:",
-            tenantLesseeError.message,
-          );
         }
 
         const candidateSubmissionIds = [
@@ -1054,10 +1034,6 @@ const JoLandownerRegistry: React.FC = () => {
                 .in("id", candidateSubmissionIds);
 
             if (candidateError) {
-              console.warn(
-                "Linked farmer lookup (submission match) error:",
-                candidateError.message,
-              );
             }
 
             const nameMatches = (candidateSubmissions as CandidateSubmission[] || []).filter(
@@ -1114,10 +1090,6 @@ const JoLandownerRegistry: React.FC = () => {
           }
         }
       } catch (linkedFarmerErr) {
-        console.warn(
-          "Linked farmer registration check failed (non-blocking):",
-          linkedFarmerErr,
-        );
       }
 
       const farmingActivities: string[] = [];

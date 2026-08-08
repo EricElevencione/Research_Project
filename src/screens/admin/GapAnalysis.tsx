@@ -98,7 +98,6 @@ const GapAnalysis: React.FC = () => {
     setError(null);
     try {
       // Gap analysis endpoint not available in Supabase - return empty data
-      console.log("Gap analysis not available in Supabase, using empty data");
       setGapData(null);
       setError("Gap analysis feature not available in cloud mode");
     } catch (error) {
@@ -115,9 +114,6 @@ const GapAnalysis: React.FC = () => {
     setLoadingRecs(true);
     try {
       // Recommendations endpoint not available in Supabase - return empty data
-      console.log(
-        "Recommendations not available in Supabase, using empty data",
-      );
       setRecommendations(null);
     } catch (error) {
       console.error("Error fetching recommendations:", error);

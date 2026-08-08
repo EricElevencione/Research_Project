@@ -106,8 +106,7 @@ export const useRegionDashboardStats = (selectedAllocationId?: number): RegionDa
         supabase.from("rsbsa_submission").select('id, BARANGAY, "TOTAL FARM AREA"'),
       ]);
 
-      const requests = requestsRes.data || []; console.log('FETCHED REQUESTS:', requests);
-      const allocations = allocationsRes.data || [];
+      const requests = requestsRes.data || []; const allocations = allocationsRes.data || [];
       const distributions = distributionsRes.data || [];
       const inventory = inventoryRes.data || [];
       const seedCatalog = seedCatalogRes.data || [];
@@ -144,12 +143,12 @@ export const useRegionDashboardStats = (selectedAllocationId?: number): RegionDa
         ? Math.round((fulfilledRequestsCount / activeRequests.length) * 100)
         : 0;
 
-      const fulfilledRequests = activeRequests.filter((r: any) => 
-        (r.status || "").toLowerCase() === "approved" || 
-        (r.status || "").toLowerCase() === "distributed" || 
+      const fulfilledRequests = activeRequests.filter((r: any) =>
+        (r.status || "").toLowerCase() === "approved" ||
+        (r.status || "").toLowerCase() === "distributed" ||
         (r.status || "").toLowerCase() === "claimed"
       );
-      
+
       const uniqueFarmers = new Set(fulfilledRequests.map((r: any) => r.farmer_id));
       let totalHectaresCovered = 0;
       fulfilledRequests.forEach((req: any) => {
@@ -185,7 +184,7 @@ export const useRegionDashboardStats = (selectedAllocationId?: number): RegionDa
 
             let fieldName = rf.replace('requested_', '').replace(/_bags|_kg|_liters/g, '');
             let allocField = rf.replace('requested_', '');
-            
+
             // Map to allocation field names for comparison later
             if (allocField === 'complete_14_bags') allocField = 'complete_14_14_14_bags';
             if (allocField === 'ammonium_sulfate_bags') allocField = 'ammonium_sulfate_21_0_0_bags';
@@ -196,17 +195,17 @@ export const useRegionDashboardStats = (selectedAllocationId?: number): RegionDa
 
             const isSeed = rf.includes('_kg') || fieldName.includes('seed');
             const type: "seed" | "fertilizer" = isSeed ? "seed" : "fertilizer";
-            
+
             let displayName = fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             // Try to use catalog name if exact match
             if (isSeed && seedNameMap.has(fieldName)) displayName = seedNameMap.get(fieldName)!;
             if (!isSeed && fertNameMap.has(fieldName)) displayName = fertNameMap.get(fieldName)!;
 
             const existing = varietyDemandMap.get(allocField) || { totalRequested: 0, type, displayName };
-            
+
             // Only sum up requests that are pending or approved for alerts/demand
             if ((req.status || "").toLowerCase() === "pending" || (req.status || "").toLowerCase() === "approved") {
-               existing.totalRequested += val;
+              existing.totalRequested += val;
             }
 
             varietyDemandMap.set(allocField, existing);
@@ -237,7 +236,7 @@ export const useRegionDashboardStats = (selectedAllocationId?: number): RegionDa
       // --- Stock Alerts ---
       // Get remaining stock either from selected allocation or master inventory
       const stockShortageAlerts: StockAlert[] = [];
-      
+
       if (selectedAllocationId) {
         const alloc = allocations.find((a: any) => a.id === selectedAllocationId);
         if (alloc) {
@@ -247,7 +246,7 @@ export const useRegionDashboardStats = (selectedAllocationId?: number): RegionDa
             // To simplify, we'll check if requested > allocated as a primary alert
             // Since we can't easily break down distributions per specific field for this allocation easily without re-parsing,
             // we will use the generic assumption that totalRequested > allocated is a shortage.
-            
+
             if (data.totalRequested > allocated) {
               stockShortageAlerts.push({
                 id: field,
@@ -265,10 +264,10 @@ export const useRegionDashboardStats = (selectedAllocationId?: number): RegionDa
         varietyDemandMap.forEach((data, field) => {
           // Attempt to match field with inventory product_id
           // This mapping might not be 1:1, a robust mapping is needed or we match via string similarity
-          let matchedInv = inventory.find((i: any) => 
-             i.product_id === field || 
-             field.includes(i.product_id) || 
-             i.product_id.includes(field.replace('_bags','').replace('_kg',''))
+          let matchedInv = inventory.find((i: any) =>
+            i.product_id === field ||
+            field.includes(i.product_id) ||
+            i.product_id.includes(field.replace('_bags', '').replace('_kg', ''))
           );
 
           if (matchedInv) {

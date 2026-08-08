@@ -96,24 +96,8 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
         (!surname && !firstName && !ffrsId && !farmerId) ||
         (!barangay && !ffrsId && !farmerId)
       ) {
-        console.log("Missing required fields for crop/planting info:", {
-          surname,
-          firstName,
-          middleName,
-          barangay,
-          ffrsId,
-          farmerId,
-        });
         return { owner: null, tenants: [], landHistory: [] };
       }
-      console.log("Fetching crop info via Supabase for:", {
-        surname,
-        firstName,
-        middleName,
-        barangay,
-        ffrsId,
-        farmerId,
-      });
       const identityHint =
         farmerId !== undefined && farmerId !== null && String(farmerId).trim()
           ? `farmer_id:${String(farmerId).trim()}`
@@ -127,7 +111,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
         barangay,
         identityHint,
       );
-      console.log("Crop info result:", result);
       return result;
     } catch (err) {
       console.error("Error fetching crop/planting info:", err);
@@ -144,11 +127,9 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
           const data = response.data || [];
           setFarmlandRecords(Array.isArray(data) ? data : []);
         } else {
-          console.warn("Error fetching land plots:", response.error);
           setFarmlandRecords([]);
         }
       } catch (err: any) {
-        console.warn("Error fetching farmland records (non-blocking):", err);
         setFarmlandRecords([]);
       } finally {
         setLoading(false);
@@ -186,7 +167,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
         let lastErr: any = null;
         for (const url of candidates) {
           try {
-            console.log("Fetching municipal boundary:", url);
             const resp = await fetch(url);
             if (resp.ok) {
               municipalData = await resp.json();
@@ -355,10 +335,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
     return <div>Error loading boundary data: {boundaryError}</div>;
   }
 
-  console.log(
-    "Rendering map choropleth; parcel counts:",
-    parcelCountsByBarangay,
-  );
 
   const MapSizeInvalidator: React.FC = () => {
     const map = useMap();
@@ -516,8 +492,8 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                 let hasAreaMismatch = false;
                 const recordedArea = parseFloat(
                   props.area ||
-                    props.total_farm_area_ha ||
-                    props.totalFarmAreaHa,
+                  props.total_farm_area_ha ||
+                  props.totalFarmAreaHa,
                 );
                 if (
                   Number.isFinite(recordedArea) &&
@@ -556,7 +532,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                       }
                     }
                   } catch (e) {
-                    console.warn("Map style area calc error:", e);
                   }
                 }
 
@@ -586,17 +561,17 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                     : false;
                 return isHighlighted
                   ? {
-                      color: "#e74c3c",
-                      weight: 3,
-                      opacity: 1,
-                      fillOpacity: 0.2,
-                    }
+                    color: "#e74c3c",
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 0.2,
+                  }
                   : {
-                      color: "blue",
-                      weight: 2,
-                      opacity: 0.8,
-                      fillOpacity: 0.5,
-                    };
+                    color: "blue",
+                    weight: 2,
+                    opacity: 0.8,
+                    fillOpacity: 0.5,
+                  };
               }}
               filter={(feature) =>
                 !!feature.geometry &&
@@ -606,14 +581,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
               onEachFeature={(feature, layer) => {
                 if (feature.properties) {
                   // Debug: Log all available properties
-                  console.log(
-                    "Feature properties:",
-                    JSON.stringify(feature.properties, null, 2),
-                  );
-                  console.log(
-                    "Available property keys:",
-                    Object.keys(feature.properties),
-                  );
 
                   // Get name parts from land_plot properties
                   const surname =
@@ -643,18 +610,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                     "_",
                   );
 
-                  console.log(
-                    "Map click - featureKey:",
-                    featureKey,
-                    "firstName:",
-                    firstName,
-                    "surname:",
-                    surname,
-                    "ffrsId:",
-                        ffrsId,
-                    "farmerId:",
-                    farmerId,
-                  );
 
                   // Pull parcel-level fields (support both snake_case and camelCase)
                   const parcelNumber =
@@ -729,15 +684,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                       const isTransferred =
                         feature.properties?.is_current_owner === false;
                       // Fetch crop/planting info
-                      console.log("Fetching crop/planting info for:", {
-                        surname,
-                        firstName,
-                        middleName,
-                        barangay: location,
-                        ffrsId,
-                        farmerId,
-                      });
-                      console.log("Feature properties:", feature.properties);
                       const [cropInfo, resolvedOwner] = await Promise.all([
                         fetchCropPlantingInfo(
                           surname,
@@ -752,14 +698,14 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                         // above already IS the current owner.
                         isTransferred && parcelNumberForLookup
                           ? getCurrentParcelOwner(String(parcelNumberForLookup))
-                              .then((res) => res?.data || null)
-                              .catch((err) => {
-                                console.error(
-                                  "Error resolving current parcel owner:",
-                                  err,
-                                );
-                                return null;
-                              })
+                            .then((res) => res?.data || null)
+                            .catch((err) => {
+                              console.error(
+                                "Error resolving current parcel owner:",
+                                err,
+                              );
+                              return null;
+                            })
                           : Promise.resolve(null),
                       ]);
                       const resolvedOwnerName =
@@ -815,8 +761,8 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                           let areaMismatchHtml = "";
                           const recordedArea = parseFloat(
                             feature.properties.area ||
-                              feature.properties.total_farm_area_ha ||
-                              feature.properties.totalFarmAreaHa,
+                            feature.properties.total_farm_area_ha ||
+                            feature.properties.totalFarmAreaHa,
                           );
                           if (
                             Number.isFinite(recordedArea) &&
@@ -835,7 +781,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                       : latLngs;
                                     polygonAreaSqm += (L as any).GeometryUtil
                                       ? (L as any)
-                                          .GeometryUtil.geodesicArea(ring)
+                                        .GeometryUtil.geodesicArea(ring)
                                       : 0;
                                   }
                                 }
@@ -873,10 +819,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                 }
                               }
                             } catch (areaCalcErr) {
-                              console.warn(
-                                "Area mismatch calc error in popup:",
-                                areaCalcErr,
-                              );
                             }
                           }
                           if (
@@ -958,7 +900,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                               const ownerStatusLabel = isStaleRegisteredOwner
                                 ? "Previous Owner"
                                 : ownerStatusRaw === "owner" ||
-                                    ownerStatusRaw === "registered owner"
+                                  ownerStatusRaw === "registered owner"
                                   ? "Registered Owner"
                                   : ownerStatusRaw === "tenant"
                                     ? "Tenant"
@@ -967,9 +909,9 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                       : ownerStatusRaw === "tenant/lessee"
                                         ? "Tenant + Lessee"
                                         : String(
-                                            effectiveCropInfo.owner
-                                              .ownership_status || "Unknown",
-                                          );
+                                          effectiveCropInfo.owner
+                                            .ownership_status || "Unknown",
+                                        );
                               const ownerStatusColor = isStaleRegisteredOwner
                                 ? "#d97706"
                                 : ownerStatusLabel === "Registered Owner"
@@ -989,22 +931,22 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                               const tenantNames =
                                 tenantCount > 0
                                   ? effectiveCropInfo.tenants
-                                      .map((tenant: any) =>
-                                        escapeHtml(
-                                          tenant?.farmer_name || "Unknown",
-                                        ),
-                                      )
-                                      .join(", ")
+                                    .map((tenant: any) =>
+                                      escapeHtml(
+                                        tenant?.farmer_name || "Unknown",
+                                      ),
+                                    )
+                                    .join(", ")
                                   : "";
                               const ownerRegDate = effectiveCropInfo.owner
                                 .registration_date
                                 ? new Date(
-                                    effectiveCropInfo.owner.registration_date,
-                                  ).toLocaleDateString("en-US", {
-                                    year: "numeric",
-                                    month: "short",
-                                    day: "numeric",
-                                  })
+                                  effectiveCropInfo.owner.registration_date,
+                                ).toLocaleDateString("en-US", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })
                                 : "N/A";
                               html += `<div class="farmland-popup-owner-section">`;
                               html += `<div class="farmland-popup-section-title" style="font-size: 0.85em; color: ${isStaleRegisteredOwner ? "#d97706" : "#16a34a"}; font-weight: 600; margin-bottom: 8px; padding-left: 4px;">🏠 ${isStaleRegisteredOwner ? "Previously Plotted As" : "Land Owner"}</div>`;
@@ -1038,12 +980,12 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                       : crop.toLowerCase().includes("corn")
                                         ? "#eab308"
                                         : crop
-                                              .toLowerCase()
-                                              .includes("livestock")
+                                          .toLowerCase()
+                                          .includes("livestock")
                                           ? "#f97316"
                                           : crop
-                                                .toLowerCase()
-                                                .includes("poultry")
+                                            .toLowerCase()
+                                            .includes("poultry")
                                             ? "#ef4444"
                                             : "#8b5cf6";
                                     html += `<span class="farmland-popup-crop-tag" style="background: ${cropColor}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500;">🌱 ${crop}</span>`;
@@ -1074,7 +1016,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                     .toLowerCase();
                                   const tenantStatusLabel =
                                     tenantStatusRaw === "owner" ||
-                                    tenantStatusRaw === "registered owner"
+                                      tenantStatusRaw === "registered owner"
                                       ? "Registered Owner"
                                       : tenantStatusRaw === "tenant"
                                         ? "Tenant"
@@ -1085,12 +1027,12 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                             : "Unknown";
                                   const tenantRegDate = tenant.registration_date
                                     ? new Date(
-                                        tenant.registration_date,
-                                      ).toLocaleDateString("en-US", {
-                                        year: "numeric",
-                                        month: "short",
-                                        day: "numeric",
-                                      })
+                                      tenant.registration_date,
+                                    ).toLocaleDateString("en-US", {
+                                      year: "numeric",
+                                      month: "short",
+                                      day: "numeric",
+                                    })
                                     : "N/A";
                                   html += `<div class="farmland-popup-tenant-card" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #fcd34d; border-radius: 8px; padding: 10px; margin-bottom: 8px;">`;
                                   html += `<div class="farmland-popup-tenant-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">`;
@@ -1108,12 +1050,12 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                       : crop.toLowerCase().includes("corn")
                                         ? "#eab308"
                                         : crop
-                                              .toLowerCase()
-                                              .includes("livestock")
+                                          .toLowerCase()
+                                          .includes("livestock")
                                           ? "#f97316"
                                           : crop
-                                                .toLowerCase()
-                                                .includes("poultry")
+                                            .toLowerCase()
+                                            .includes("poultry")
                                             ? "#ef4444"
                                             : "#8b5cf6";
                                     html += `<span class="farmland-popup-tenant-crop-tag" style="background: ${cropColor}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 500;">🌱 ${crop}</span>`;
@@ -1153,7 +1095,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                   record?.change_type || "Update";
                                 const periodStart = formatDisplayDate(
                                   record?.period_start_date ||
-                                    record?.created_at,
+                                  record?.created_at,
                                 );
                                 const periodEnd = formatDisplayDate(
                                   record?.period_end_date,
@@ -1180,7 +1122,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                   record?.transferred_area_ha;
                                 const transferredArea =
                                   rawTransferred !== null &&
-                                  rawTransferred !== undefined
+                                    rawTransferred !== undefined
                                     ? Number(rawTransferred)
                                     : NaN;
                                 const totalArea = Number(

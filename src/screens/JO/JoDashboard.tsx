@@ -127,7 +127,6 @@ const JoDashboard: React.FC = () => {
           }
         } else {
           // Fallback to calculated season
-          console.log("Using calculated default season");
           const currentDate = new Date();
           const month = currentDate.getMonth();
           const year = currentDate.getFullYear();
@@ -183,12 +182,6 @@ const JoDashboard: React.FC = () => {
         const parsedAllocationId = Number(selectedAllocationId);
         const hasValidAllocationId =
           Number.isFinite(parsedAllocationId) && parsedAllocationId > 0;
-        console.log(
-          "Fetching dashboard data for allocation:",
-          selectedAllocationId,
-          "season:",
-          selectedSeasonLabel,
-        );
 
         // Fetch all dashboard data in parallel
         const [statsResponse] = await Promise.all([
@@ -206,7 +199,6 @@ const JoDashboard: React.FC = () => {
         // Handle dashboard stats
         if (!statsResponse.error && statsResponse.data) {
           setDashboardStats(statsResponse.data);
-          console.log("✅ Dashboard stats loaded:", statsResponse.data);
         } else {
           console.error("Error fetching dashboard stats:", statsResponse.error);
           // Set default empty stats on error

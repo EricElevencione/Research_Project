@@ -231,15 +231,15 @@ const FarmerHistoryModal: React.FC<FarmerHistoryModalProps> = ({
   }, []);
 
   // ── Role-split parcel groups ─────────────────────────────────────────────
-  const { 
-    ownerParcels, 
-    occupantParcels, 
-    activeOwnerParcels, 
-    historicalOwnerParcels, 
-    activeOccupantParcels, 
+  const {
+    ownerParcels,
+    occupantParcels,
+    activeOwnerParcels,
+    historicalOwnerParcels,
+    activeOccupantParcels,
     historicalOccupantParcels,
-    isOwnerFarmer, 
-    isOccupantFarmer 
+    isOwnerFarmer,
+    isOccupantFarmer
   } = useMemo(() => {
     if (!data) {
       return {
@@ -363,7 +363,7 @@ const FarmerHistoryModal: React.FC<FarmerHistoryModalProps> = ({
   // ── My Tenants memo ──────────────────────────────────────────────────────
   const tenantRecords = useMemo(() => {
     if (!data) return [];
-    
+
     const records: HistoryEvent[] = [];
     Object.keys(ownerParcels).forEach((parcelKey) => {
       const events = ownerParcels[parcelKey];
@@ -451,7 +451,7 @@ const FarmerHistoryModal: React.FC<FarmerHistoryModalProps> = ({
             {sortedEvents.map((ev, idx) => {
               const role = getOccupantRole(ev);
               const evInfo = getEventInfo(ev.change_type);
-              
+
               // Determine current and end dates
               let isCurrentInTimeline = ev.is_current;
               let endDateToShow = ev.period_end_date;
@@ -489,7 +489,7 @@ const FarmerHistoryModal: React.FC<FarmerHistoryModalProps> = ({
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="fhm-tl-content-v2">
                     <div className="fhm-tl-header-v2">
                       <strong className="fhm-tl-title-v2">{ev.change_type || "RECORD"}</strong>
@@ -587,9 +587,8 @@ const FarmerHistoryModal: React.FC<FarmerHistoryModalProps> = ({
               </div>
             </div>
             <span
-              className={`fhm-status-badge ${
-                currentEvent ? "fhm-badge-active" : "fhm-badge-past"
-              }`}
+              className={`fhm-status-badge ${currentEvent ? "fhm-badge-active" : "fhm-badge-past"
+                }`}
             >
               {currentEvent ? "Active" : "Past"}
             </span>
@@ -644,7 +643,7 @@ const FarmerHistoryModal: React.FC<FarmerHistoryModalProps> = ({
 
   // ── Occupant Timeline Renderer ──────────────────────────────────────────
   const renderOccupantTimeline = useCallback(
-    (events: HistoryEvent[]) => {
+    (events: HistoryEvent[], key?: string) => {
       // Sort newest to oldest:
       const sortedEvents = [...events].sort((a, b) => {
         const da = a.period_start_date || a.created_at || "";
@@ -653,14 +652,14 @@ const FarmerHistoryModal: React.FC<FarmerHistoryModalProps> = ({
       });
 
       return (
-        <div className="fhm-timeline-container-v2">
+        <div className="fhm-timeline-container-v2" key={key}>
           <ul className="fhm-timeline-list-v2">
             {sortedEvents.map((ev, idx) => {
               const role = getOccupantRole(ev);
               const evInfo = getEventInfo(ev.change_type);
               const isLast = idx === sortedEvents.length - 1;
               const pLabel = ev.parcel_number || "N/A";
-              
+
               const itemClass = ev.is_current ? "fhm-tl-item-current-v2" : "fhm-tl-item-past-v2";
 
               return (
@@ -677,7 +676,7 @@ const FarmerHistoryModal: React.FC<FarmerHistoryModalProps> = ({
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="fhm-tl-content-v2">
                     <div className="fhm-tl-header-v2">
                       <strong className="fhm-tl-title-v2">FARMING PARCEL {pLabel}</strong>
@@ -859,20 +858,20 @@ const FarmerHistoryModal: React.FC<FarmerHistoryModalProps> = ({
 
               {/* ── Tab Navigation ── */}
               <div className="fhm-tab-nav">
-                <button 
+                <button
                   className={`fhm-tab-btn ${activeTab === "all" ? "active" : ""}`}
                   onClick={() => setActiveTab("all")}
                 >
                   📋 All Overview
                 </button>
-                <button 
+                <button
                   className={`fhm-tab-btn ${activeTab === "owner" ? "active" : ""}`}
                   onClick={() => setActiveTab("owner")}
                   disabled={!isOwnerFarmer}
                 >
                   🏡 Landowner Assets
                 </button>
-                <button 
+                <button
                   className={`fhm-tab-btn ${activeTab === "cultivation" ? "active" : ""}`}
                   onClick={() => setActiveTab("cultivation")}
                   disabled={!isOccupantFarmer}
@@ -880,7 +879,7 @@ const FarmerHistoryModal: React.FC<FarmerHistoryModalProps> = ({
                   🚜 Tenancies & Leases
                 </button>
                 {isOwnerFarmer && (
-                  <button 
+                  <button
                     className={`fhm-tab-btn ${activeTab === "tenants" ? "active" : ""}`}
                     onClick={() => setActiveTab("tenants")}
                   >
@@ -938,48 +937,48 @@ const FarmerHistoryModal: React.FC<FarmerHistoryModalProps> = ({
                   <div className="fhm-timeline-stack" style={{ marginTop: "16px" }}>
                     {Object.keys(activeOccupantParcels).map((key) => {
                       const events = activeOccupantParcels[key];
-                      return renderOccupantTimeline(events);
+                      return renderOccupantTimeline(events, key);
                     })}
                   </div>
                 </div>
               )}
 
               {/* ── Historical / Transferred Assets Section ── */}
-              {(activeTab === "all" || activeTab === "owner" || activeTab === "cultivation") && 
-               (Object.keys(historicalOwnerParcels).length > 0 || Object.keys(historicalOccupantParcels).length > 0) && (
-                <div className="fhm-section">
-                  <div className="fhm-section-hd">
-                    <div className="fhm-section-hd-left">
-                      <span className="fhm-section-icon-wrap fhm-icon-past" style={{ background: "#f1f5f9", color: "#64748b" }}>
-                        🕒
-                      </span>
-                      <div>
-                        <div className="fhm-section-title">Historical / Transferred Assets</div>
-                        <div className="fhm-section-sub">
-                          Past ownerships and ended tenancy agreements
+              {(activeTab === "all" || activeTab === "owner" || activeTab === "cultivation") &&
+                (Object.keys(historicalOwnerParcels).length > 0 || Object.keys(historicalOccupantParcels).length > 0) && (
+                  <div className="fhm-section">
+                    <div className="fhm-section-hd">
+                      <div className="fhm-section-hd-left">
+                        <span className="fhm-section-icon-wrap fhm-icon-past" style={{ background: "#f1f5f9", color: "#64748b" }}>
+                          🕒
+                        </span>
+                        <div>
+                          <div className="fhm-section-title">Historical / Transferred Assets</div>
+                          <div className="fhm-section-sub">
+                            Past ownerships and ended tenancy agreements
+                          </div>
                         </div>
                       </div>
+                      <span className="fhm-section-count-badge" style={{ background: "#f1f5f9", color: "#64748b" }}>
+                        {(activeTab !== "cultivation" ? Object.keys(historicalOwnerParcels).length : 0) +
+                          (activeTab !== "owner" ? Object.keys(historicalOccupantParcels).length : 0)}
+                      </span>
                     </div>
-                    <span className="fhm-section-count-badge" style={{ background: "#f1f5f9", color: "#64748b" }}>
-                      {(activeTab !== "cultivation" ? Object.keys(historicalOwnerParcels).length : 0) + 
-                       (activeTab !== "owner" ? Object.keys(historicalOccupantParcels).length : 0)}
-                    </span>
-                  </div>
-                  
-                  <div className="fhm-parcel-stack">
-                    {/* Past Owned Parcels */}
-                    {activeTab !== "cultivation" && Object.keys(historicalOwnerParcels).map((key) =>
-                      renderOwnerParcelCard(key, historicalOwnerParcels[key])
-                    )}
 
-                    {/* Past Tenancies */}
-                    {activeTab !== "owner" && Object.keys(historicalOccupantParcels).map((key) => {
-                      const events = historicalOccupantParcels[key];
-                      return renderOccupantTimeline(events);
-                    })}
+                    <div className="fhm-parcel-stack">
+                      {/* Past Owned Parcels */}
+                      {activeTab !== "cultivation" && Object.keys(historicalOwnerParcels).map((key) =>
+                        renderOwnerParcelCard(key, historicalOwnerParcels[key])
+                      )}
+
+                      {/* Past Tenancies */}
+                      {activeTab !== "owner" && Object.keys(historicalOccupantParcels).map((key) => {
+                        const events = historicalOccupantParcels[key];
+                        return renderOccupantTimeline(events, key);
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* ── My Tenants Section ── */}
               {activeTab === "tenants" && (
@@ -1010,10 +1009,10 @@ const FarmerHistoryModal: React.FC<FarmerHistoryModalProps> = ({
                       {tenantRecords.map((ev, idx) => {
                         const role = getOccupantRole(ev);
                         const statusClass = ev.is_current ? "fhm-badge-active" : "fhm-badge-past";
-                        
+
                         return (
-                          <div 
-                            key={`${ev.id}-${idx}`} 
+                          <div
+                            key={`${ev.id}-${idx}`}
                             className="fhm-tenant-record-card"
                             style={{
                               background: "#fff",
@@ -1038,7 +1037,7 @@ const FarmerHistoryModal: React.FC<FarmerHistoryModalProps> = ({
                                   {role.icon} {role.label}
                                 </span>
                               </div>
-                              
+
                               <div style={{ fontSize: "0.8rem", color: "#64748b", display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "8px" }}>
                                 <span>📦 Parcel: <strong>{ev.parcel_number || "—"}</strong></span>
                                 <span>📍 Brgy. {ev.farm_location_barangay || "—"}</span>

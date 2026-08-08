@@ -100,7 +100,6 @@ const TechFarmerProf: React.FC = () => {
         throw new Error(response.error || "Farmer not found");
       }
 
-      console.log("Fetched farmer data:", response.data); // Debug log
       setFarmer(response.data);
       setLoading(false);
     } catch (err: any) {

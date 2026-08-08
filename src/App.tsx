@@ -12,7 +12,6 @@ function App() {
                 console.error('Connection failed:', error);
                 alert('Connection failed: ' + error.message);
             } else {
-                console.log('Connected! Row count:', data.count);
                 alert('Connected! Row count: ' + data.count);
             }
         } catch (err) {

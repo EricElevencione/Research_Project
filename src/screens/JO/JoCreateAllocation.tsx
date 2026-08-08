@@ -341,7 +341,6 @@ const JoCreateAllocation: React.FC = () => {
       }
 
       const result = response.data;
-      console.log("✅ Allocation created:", result);
       const allocationId = result?.id;
 
       if (!allocationId) {

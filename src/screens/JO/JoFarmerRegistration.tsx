@@ -724,7 +724,6 @@ const JoFarmerRegistration: React.FC = () => {
         });
         setOwnerParcels(parcels);
         if (!parcels || parcels.length === 0) {
-          console.warn("No parcels found for land owner");
         }
       } else {
         setOwnerParcels([]);
@@ -871,7 +870,6 @@ const JoFarmerRegistration: React.FC = () => {
     const primarySelected = ownerParcels.filter((p) =>
       selectedParcelIds.has(String(p.id)),
     );
-    console.log("📋 Applying selected parcels:", primarySelected);
 
     const primaryMapped: Parcel[] = primarySelected.map(
       (ownerParcel: any, index: number) => ({
@@ -935,10 +933,6 @@ const JoFarmerRegistration: React.FC = () => {
       },
     );
 
-    console.log("📋 Mapped parcels with existingParcelId:", [
-      ...primaryMapped,
-      ...additionalMapped,
-    ]);
     setFormData((prev) => ({
       ...prev,
       farmlandParcels: [...primaryMapped, ...additionalMapped],
@@ -1493,10 +1487,6 @@ const JoFarmerRegistration: React.FC = () => {
         })),
       };
 
-      console.log(
-        "📤 Submitting transformed data:",
-        JSON.stringify(transformedData.farmlandParcels, null, 2),
-      );
 
       const response = await createRsbsaSubmission({
         draftId,
@@ -1507,7 +1497,6 @@ const JoFarmerRegistration: React.FC = () => {
         throw new Error(response.error || `HTTP error`);
       }
       const result = response.data;
-      console.log("Submission response:", result);
       return result; // Should include message, submissionId, submittedAt
     } catch (error) {
       let message = "Unknown error";
@@ -1756,8 +1745,6 @@ const JoFarmerRegistration: React.FC = () => {
           const { error: syncErr } = await supabase.rpc("sync_farmer_no_parcels_status", {
             p_farmer_id: activeTenant.farmerId
           });
-
-          if (syncErr) console.warn("Failed to sync farmer no parcels status:", syncErr.message);
         }
         succeeded += 1;
       } catch (err) {

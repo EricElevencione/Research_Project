@@ -11,9 +11,6 @@
  */
 export async function registerTileCacheServiceWorker(): Promise<void> {
   if (!("serviceWorker" in navigator)) {
-    console.warn(
-      "offlineTileCache: Service Workers not supported in this browser.",
-    );
     return;
   }
 
@@ -28,18 +25,11 @@ export async function registerTileCacheServiceWorker(): Promise<void> {
       if (newWorker) {
         newWorker.addEventListener("statechange", () => {
           if (newWorker.state === "activated") {
-            console.log(
-              "offlineTileCache: New service worker activated — tile caching ready.",
-            );
           }
         });
       }
     });
 
-    console.log(
-      "offlineTileCache: Service worker registered successfully.",
-      registration.scope,
-    );
   } catch (error) {
     console.error("offlineTileCache: Service worker registration failed:", error);
   }
@@ -76,7 +66,6 @@ export async function clearTileCache(): Promise<void> {
 
   try {
     await caches.delete("map-tiles-v1");
-    console.log("offlineTileCache: Tile cache cleared.");
   } catch (error) {
     console.error("offlineTileCache: Failed to clear tile cache:", error);
   }

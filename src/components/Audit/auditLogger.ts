@@ -174,7 +174,6 @@ export class AuditLogger {
                 console.error('Failed to log audit event:', error.message, error.details, error.hint);
                 console.error('Full error:', JSON.stringify(error));
             } else {
-                console.log('Audit event logged successfully:', data.action, data.module, data.description);
             }
         } catch (err) {
             console.error('Error logging audit event:', err);
@@ -243,7 +242,6 @@ export class AuditLogger {
     ): Promise<void> {
         const dedupeKey = `farmer_registration:${user.id ?? 'anonymous'}:${farmerId}`;
         if (this.isRecentDuplicate(dedupeKey, 10000)) {
-            console.warn('Skipped duplicate farmer registration audit event:', dedupeKey);
             return;
         }
 

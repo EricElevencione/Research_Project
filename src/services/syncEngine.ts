@@ -189,13 +189,9 @@ export async function triggerSync(): Promise<SyncResult> {
       return result;
     }
 
-    console.log(
-      `syncEngine: Processing ${actions.length} pending action(s)...`,
-    );
 
     for (const action of actions) {
       if (!navigator.onLine) {
-        console.log("syncEngine: Lost connectivity mid-sync, stopping.");
         break;
       }
 
@@ -210,9 +206,6 @@ export async function triggerSync(): Promise<SyncResult> {
           actionId,
           type: action.type,
         });
-        console.log(
-          `syncEngine: ✅ Synced action #${actionId} (${action.type})`,
-        );
       } catch (err: any) {
         const errorMsg = err?.message || "Unknown sync error";
         result.failed++;
@@ -224,9 +217,6 @@ export async function triggerSync(): Promise<SyncResult> {
           );
         } else {
           await markActionFailed(actionId, errorMsg);
-          console.warn(
-            `syncEngine: ⚠️ Action #${actionId} failed (retry ${(action.retryCount || 0) + 1}/${MAX_RETRIES}): ${errorMsg}`,
-          );
         }
 
         emit("sync:item-fail", {
@@ -243,9 +233,6 @@ export async function triggerSync(): Promise<SyncResult> {
     _isSyncing = false;
     _lastSync = new Date();
     emit("sync:complete", result);
-    console.log(
-      `syncEngine: Sync complete — ${result.succeeded}/${result.total} succeeded, ${result.failed} failed`,
-    );
   }
 
   return result;
@@ -267,7 +254,6 @@ export async function getSyncStatus(): Promise<SyncStatus> {
 // ─── Auto-sync on connectivity restore ──────────────────────────────────────
 
 function handleOnline() {
-  console.log("syncEngine: Connection restored — triggering sync...");
   // Small delay to let the network fully stabilize
   setTimeout(() => {
     triggerSync();
@@ -288,15 +274,11 @@ export function startSyncEngine(): void {
   if (navigator.onLine) {
     getPendingCount().then((count) => {
       if (count > 0) {
-        console.log(
-          `syncEngine: Found ${count} pending action(s) on startup — syncing...`,
-        );
         triggerSync();
       }
     });
   }
 
-  console.log("syncEngine: Started and listening for connectivity changes.");
 }
 
 /**

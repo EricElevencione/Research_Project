@@ -68,8 +68,8 @@ const hasShapeAreaMismatch = (shape: any): boolean => {
   if (!shape) return false;
   const recordedArea = parseFloat(
     shape.properties?.area ||
-      shape.properties?.total_farm_area_ha ||
-      shape.properties?.totalFarmAreaHa,
+    shape.properties?.total_farm_area_ha ||
+    shape.properties?.totalFarmAreaHa,
   );
   if (!Number.isFinite(recordedArea) || recordedArea <= 0) return false;
 
@@ -84,7 +84,6 @@ const hasShapeAreaMismatch = (shape: any): boolean => {
           : 0;
       }
     } catch (e) {
-      console.warn("LandPlottingMap area calculation error:", e);
     }
   } else if (shape.geometry) {
     try {
@@ -101,7 +100,6 @@ const hasShapeAreaMismatch = (shape: any): boolean => {
         }
       });
     } catch (e) {
-      console.warn("LandPlottingMap geometry area calculation error:", e);
     }
   }
 
@@ -317,14 +315,13 @@ const DrawAreaTracker: React.FC<{ targetAreaHa?: number }> = ({
           </div>
           ${statusText ? `<div style="margin-top:4px;font-size:11px">${statusText}</div>` : ""}
         </div>
-        ${
-          perimeter > 0
-            ? `
+        ${perimeter > 0
+          ? `
         <div style="margin-top:8px;border-top:1px solid #334155;padding-top:6px">
           <div style="font-size:11px;color:#94a3b8;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:2px">Total Perimeter</div>
           <div style="font-size:15px;font-weight:600">${formatDistanceLabel(perimeter)}</div>
         </div>`
-            : ""
+          : ""
         }
       `;
     };
@@ -410,94 +407,94 @@ const AutoFitMapData: React.FC<{
   geometryPreview,
   fitKey,
 }) => {
-  const map = useMap();
-  const lastFitKeyRef = useRef<string | null>(null);
+    const map = useMap();
+    const lastFitKeyRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    const normalizedFitKey = String(fitKey || "");
-    if (normalizedFitKey && lastFitKeyRef.current === normalizedFitKey) {
-      return;
-    }
-
-    const layersForBounds: L.Layer[] = [];
-
-    (shapes || []).forEach((shape: any) => {
-      if (shape?.layer) {
-        layersForBounds.push(shape.layer);
+    useEffect(() => {
+      const normalizedFitKey = String(fitKey || "");
+      if (normalizedFitKey && lastFitKeyRef.current === normalizedFitKey) {
+        return;
       }
-    });
 
-    const appendCollectionLayer = (collection: any) => {
-      if (!collection) return;
-      try {
-        const layer = L.geoJSON(collection as any);
-        layersForBounds.push(layer);
-      } catch {
-        // Ignore malformed collections for fit.
-      }
-    };
+      const layersForBounds: L.Layer[] = [];
 
-    appendCollectionLayer(referencePolygonFeatureCollection);
-    appendCollectionLayer(referencePointFeatureCollection);
-    appendCollectionLayer(geometryPreview);
-
-    let mergedBounds: any = null;
-
-    const extendWithLayer = (layer: any) => {
-      if (!layer) return;
-
-      if (typeof layer.getBounds === "function") {
-        const layerBounds = layer.getBounds();
-        if (layerBounds && layerBounds.isValid && layerBounds.isValid()) {
-          mergedBounds = mergedBounds
-            ? mergedBounds.extend(layerBounds)
-            : layerBounds;
-          return;
+      (shapes || []).forEach((shape: any) => {
+        if (shape?.layer) {
+          layersForBounds.push(shape.layer);
         }
-      }
-
-      if (typeof layer.getLatLng === "function") {
-        const latLng = layer.getLatLng();
-        if (
-          latLng &&
-          Number.isFinite(latLng.lat) &&
-          Number.isFinite(latLng.lng)
-        ) {
-          const pointBounds = L.latLngBounds(latLng, latLng);
-          mergedBounds = mergedBounds
-            ? mergedBounds.extend(pointBounds)
-            : pointBounds;
-        }
-      }
-    };
-
-    layersForBounds.forEach(extendWithLayer);
-
-    if (
-      mergedBounds &&
-      typeof mergedBounds.isValid === "function" &&
-      mergedBounds.isValid()
-    ) {
-      map.fitBounds(mergedBounds.pad(0.2), {
-        animate: true,
-        duration: 0.5,
       });
 
-      if (normalizedFitKey) {
-        lastFitKeyRef.current = normalizedFitKey;
-      }
-    }
-  }, [
-    map,
-    fitKey,
-    shapes,
-    referencePolygonFeatureCollection,
-    referencePointFeatureCollection,
-    geometryPreview,
-  ]);
+      const appendCollectionLayer = (collection: any) => {
+        if (!collection) return;
+        try {
+          const layer = L.geoJSON(collection as any);
+          layersForBounds.push(layer);
+        } catch {
+          // Ignore malformed collections for fit.
+        }
+      };
 
-  return null;
-};
+      appendCollectionLayer(referencePolygonFeatureCollection);
+      appendCollectionLayer(referencePointFeatureCollection);
+      appendCollectionLayer(geometryPreview);
+
+      let mergedBounds: any = null;
+
+      const extendWithLayer = (layer: any) => {
+        if (!layer) return;
+
+        if (typeof layer.getBounds === "function") {
+          const layerBounds = layer.getBounds();
+          if (layerBounds && layerBounds.isValid && layerBounds.isValid()) {
+            mergedBounds = mergedBounds
+              ? mergedBounds.extend(layerBounds)
+              : layerBounds;
+            return;
+          }
+        }
+
+        if (typeof layer.getLatLng === "function") {
+          const latLng = layer.getLatLng();
+          if (
+            latLng &&
+            Number.isFinite(latLng.lat) &&
+            Number.isFinite(latLng.lng)
+          ) {
+            const pointBounds = L.latLngBounds(latLng, latLng);
+            mergedBounds = mergedBounds
+              ? mergedBounds.extend(pointBounds)
+              : pointBounds;
+          }
+        }
+      };
+
+      layersForBounds.forEach(extendWithLayer);
+
+      if (
+        mergedBounds &&
+        typeof mergedBounds.isValid === "function" &&
+        mergedBounds.isValid()
+      ) {
+        map.fitBounds(mergedBounds.pad(0.2), {
+          animate: true,
+          duration: 0.5,
+        });
+
+        if (normalizedFitKey) {
+          lastFitKeyRef.current = normalizedFitKey;
+        }
+      }
+    }, [
+      map,
+      fitKey,
+      shapes,
+      referencePolygonFeatureCollection,
+      referencePointFeatureCollection,
+      geometryPreview,
+    ]);
+
+    return null;
+  };
 
 // Component to handle map centering
 
@@ -546,7 +543,6 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
     },
     ref,
   ) => {
-    console.log("📍 LandPlottingMap received barangayName:", barangayName);
     const [boundaryData, setBoundaryData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -580,8 +576,8 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
         if (geometryValue?.type === "FeatureCollection") {
           const featureGeometries = Array.isArray(geometryValue.features)
             ? geometryValue.features
-                .map((feature: any) => feature?.geometry)
-                .filter(Boolean)
+              .map((feature: any) => feature?.geometry)
+              .filter(Boolean)
             : [];
           return featureGeometries;
         }
@@ -615,10 +611,10 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
           });
         })
         .filter(Boolean) as Array<{
-        id: string;
-        geometry: any;
-        properties: any;
-      }>;
+          id: string;
+          geometry: any;
+          properties: any;
+        }>;
     }, [referenceShapes]);
 
     const referencePolygonFeatureCollection = useMemo(() => {
@@ -662,7 +658,6 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
 
     // Click handler for layers within the FeatureGroup
     const onLayerClick = (e: L.LeafletEvent) => {
-      console.log("Layer clicked", e);
       const clickedLayer = e.layer;
       // Find the corresponding shape in drawnShapes by leaflet_id
       // Need to ensure clickedLayer has _leaflet_id and it matches a drawn shape's layer _leaflet_id
@@ -672,23 +667,16 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
       );
 
       if (clickedShape && onShapeSelected) {
-        console.log("Shape found and selected", clickedShape);
         onShapeSelected(clickedShape);
       } else if (onShapeSelected && selectedShape) {
         // Deselect only if something is currently selected
-        console.log("Clicked outside drawn shapes, deselecting");
         onShapeSelected(null);
       }
     };
 
     useImperativeHandle(ref, () => ({
       deleteShape: (shapeId: string) => {
-        console.log("deleteShape called with shapeId:", shapeId);
         if (featureGroupRef.current) {
-          console.log(
-            "FeatureGroup ref available in deleteShape",
-            featureGroupRef.current,
-          );
           const layerToDelete = featureGroupRef.current
             .getLayers()
             .find(
@@ -696,14 +684,11 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             );
 
           if (layerToDelete) {
-            console.log("Layer found for deletion:", layerToDelete);
             featureGroupRef.current.removeLayer(layerToDelete);
-            console.log("Layer removed from FeatureGroup");
 
             setDrawnShapes((prev) =>
               prev.filter((shape) => shape.id !== shapeId),
             );
-            console.log("drawnShapes updated, calling onShapeDeleted");
 
             if (onShapeDeleted) {
               // Pass the deleted shape's info
@@ -722,11 +707,9 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
               selectedShape.id === shapeId &&
               onShapeSelected
             ) {
-              console.log("Deselecting shape in parent");
               onShapeSelected(null);
             }
           } else {
-            console.warn("Layer to delete not found with ID:", shapeId);
           }
         } else {
           console.error("featureGroupRef.current is null in deleteShape");
@@ -736,19 +719,8 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
 
     // Effect to manage layer highlighting and interactions (editing/dragging)
     useEffect(() => {
-      console.log("selectedShape changed:", selectedShape);
       if (featureGroupRef.current) {
-        console.log(
-          "FeatureGroup ref available in highlighting effect",
-          featureGroupRef.current,
-        );
         featureGroupRef.current.eachLayer((layer: any) => {
-          console.log(
-            "Checking layer for setStyle:",
-            layer,
-            typeof layer.setStyle === "function",
-            layer.options,
-          );
           // Only apply style and interaction changes to drawn shapes (which have an options.id)
           // We also check if the layer is an instance that supports editing/dragging/setStyle
           if (
@@ -759,7 +731,6 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             // Reset style for all drawn layers
             if (layer instanceof L.Path) {
               layer.setStyle(OWN_PARCEL_STYLE);
-              console.log("Resetting style for drawn layer:", layer);
             }
             // Check if the layer has editing handlers before trying to disable
             if ((layer as any).editing) {
@@ -777,15 +748,10 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                 console.error("Error disabling dragging:", e);
               }
             }
-            console.log("Disabling interactions for drawn layer:", layer);
           }
         });
 
         if (selectedShape && selectedShape.layer) {
-          console.log(
-            "Attempting to highlight shape with ID:",
-            selectedShape.id,
-          );
           const layerToHighlight = featureGroupRef.current
             .getLayers()
             .find(
@@ -797,14 +763,9 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             (layerToHighlight instanceof L.Path ||
               layerToHighlight instanceof L.Marker)
           ) {
-            console.log("Highlighting layer:", layerToHighlight);
             // Apply highlighting style
             if (layerToHighlight instanceof L.Path) {
               layerToHighlight.setStyle(OWN_PARCEL_SELECTED_STYLE);
-              console.log(
-                "Applied highlight style for layer:",
-                layerToHighlight,
-              );
             }
             // Check if the layer has editing handlers before trying to enable
             if ((layerToHighlight as any).editing) {
@@ -822,18 +783,11 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                 console.error("Error enabling dragging:", e);
               }
             }
-            console.log("Enabled interactions for layer:", layerToHighlight);
           } else {
-            console.log(
-              "Layer to highlight not found or is not a Path/Marker instance with ID:",
-              selectedShape.id,
-            );
           }
         } else {
-          console.log("No shape selected or layer not found");
         }
       } else {
-        console.log("featureGroupRef.current is null in highlighting effect");
       }
     }, [selectedShape, featureGroupRef]);
 
@@ -858,7 +812,6 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
           let lastErr: any = null;
           for (const url of candidates) {
             try {
-              console.log("Attempting to fetch boundary:", url);
               const resp = await fetch(url);
               if (resp.ok) {
                 boundaryData = await resp.json();
@@ -896,36 +849,21 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
 
     // Add shapes from props to the map when shapes prop changes
     useEffect(() => {
-      console.log("🗺️ LandPlottingMap - shapes prop changed:", shapes);
-      console.log("🗺️ LandPlottingMap - shapes length:", shapes?.length);
-      console.log(
-        "🗺️ LandPlottingMap - featureGroupRef.current:",
-        featureGroupRef.current,
-      );
 
       if (featureGroupRef.current && Array.isArray(shapes)) {
-        console.log("✅ Processing shapes, removing non-boundary layers...");
         featureGroupRef.current.eachLayer((layer: any) => {
           if (!layer.options?.isBoundary) {
             featureGroupRef.current?.removeLayer(layer);
-            console.log("🗑️ Removed layer:", layer);
           }
         });
 
-        console.log(`➕ Adding ${shapes.length} shapes to map...`);
         shapes.forEach((shape: any, index: number) => {
-          console.log(`   Shape ${index}:`, {
-            id: shape.id,
-            hasLayer: !!shape.layer,
-            properties: shape.properties,
-          });
 
           const mismatch = hasShapeAreaMismatch(shape);
           const parcelStyle = mismatch ? MISMATCH_WARNING_STYLE : OWN_PARCEL_STYLE;
 
           if (shape.layer && !featureGroupRef.current?.hasLayer(shape.layer)) {
             featureGroupRef.current?.addLayer(shape.layer);
-            console.log(`   ✅ Added shape ${shape.id} to map`);
             if (shape.layer instanceof L.Path) {
               shape.layer.setStyle(parcelStyle);
             }
@@ -933,22 +871,14 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
               shape.layer.bindPopup(getPopupContent(shape.properties));
             }
           } else if (shape.layer) {
-            console.log(`   ⚠️ Shape ${shape.id} already on map`);
             if (shape.layer instanceof L.Path) {
               shape.layer.setStyle(parcelStyle);
             }
           } else {
-            console.log(`   ❌ Shape ${shape.id} has no layer!`);
           }
         });
         setDrawnShapes(shapes);
-        console.log("✅ Finished processing shapes, drawnShapes updated");
       } else {
-        console.log("❌ Cannot process shapes:", {
-          hasFeatureGroup: !!featureGroupRef.current,
-          isArray: Array.isArray(shapes),
-          shapesValue: shapes,
-        });
       }
     }, [shapes ?? [], (shapes ?? []).length]);
 
@@ -1107,11 +1037,9 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
     };
 
     const onCreated = (e: any) => {
-      console.log("Shape created (onCreated event)", e);
       const { layer } = e;
       const geoJson = layer.toGeoJSON();
       const geometryType = geoJson.geometry.type;
-      console.log(`Created shape geometry type: ${geometryType}`);
       let newShape;
       let shapeId = `shape-${Date.now()}-${Math.random().toString(16).slice(2)}`;
       layer.options.id = shapeId; // Assign ID to the layer options
@@ -1142,9 +1070,6 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
         let boundaryFeature = null;
         if (!barangayName) {
           // If no barangay is selected, allow plotting without boundary validation
-          console.warn(
-            "No barangayName provided; skipping boundary validation.",
-          );
         }
         if (
           boundaryData &&
@@ -1170,18 +1095,8 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
         if (barangayName && boundaryFeature) {
           try {
             // Debug: Log the drawn shape and boundary feature
-            console.log(
-              "Drawn shape GeoJSON:",
-              JSON.stringify(geoJson, null, 2),
-            );
-            console.log(
-              "Boundary feature GeoJSON:",
-              JSON.stringify(boundaryFeature, null, 2),
-            );
             const within = booleanWithin(geoJson, boundaryFeature);
             const overlap = booleanOverlap(geoJson, boundaryFeature);
-            console.log("booleanWithin result:", within);
-            console.log("booleanOverlap result:", overlap);
             if (!within && !overlap) {
               if (featureGroupRef.current) {
                 featureGroupRef.current.removeLayer(layer);
@@ -1266,7 +1181,6 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
     };
 
     const onEdited = (e: any) => {
-      console.log("Shape edited (onEdited event)", e);
       const editedLayers = e.layers.getLayers();
       const blockedEditShapeIds = new Set<string>();
 
@@ -1288,12 +1202,6 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             return shape;
           }
 
-          console.log(
-            "Updating edited shape:",
-            shape.id,
-            "Geometry type:",
-            editedGeoJson.geometry.type,
-          );
 
           const updatedShape = {
             ...shape,
@@ -1318,9 +1226,6 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
           ) {
             const boundary = boundaryData.features[0];
             const boundaryGeometryType = boundary.geometry.type;
-            console.log(
-              `Boundary geometry type during edit check: ${boundaryGeometryType}`,
-            );
 
             // Only perform boundary check if the boundary is a Polygon or MultiPolygon
             if (
@@ -1342,9 +1247,6 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                 );
               }
             } else {
-              console.warn(
-                `Skipping boundary check during edit because boundary geometry is of unexpected type: ${boundaryGeometryType}`,
-              );
             }
           }
 
@@ -1354,7 +1256,6 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
       });
 
       setDrawnShapes(updatedShapes);
-      console.log("drawnShapes updated after edit");
 
       // Find the edited shape to pass to onShapeEdited
       const editedShape = updatedShapes.find(
@@ -1365,18 +1266,15 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
 
       if (onShapeEdited && editedShape) {
         onShapeEdited(editedShape);
-        console.log("onShapeEdited callback fired");
       }
 
       // Keep the edited shape selected after editing
       if (onShapeSelected && editedShape) {
         onShapeSelected(editedShape);
-        console.log("onShapeSelected callback fired after edit");
       }
     };
 
     const onDeleted = (e: any) => {
-      console.log("Shape deleted (onDeleted event)", e);
       const deletedLayers = e.layers.getLayers();
       const deletedShapeIds = deletedLayers.map(
         (layer: any) => layer.options.id,
@@ -1385,7 +1283,6 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
       setDrawnShapes((prev) =>
         prev.filter((shape) => !deletedShapeIds.includes(shape.id)),
       );
-      console.log("drawnShapes updated after delete");
 
       if (onShapeDeleted) {
         // Pass the deleted shapes' information if needed in the parent
@@ -1393,7 +1290,6 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
           deletedShapeIds.includes(shape.id),
         );
         onShapeDeleted({ layers: deletedLayers, shapes: deletedShapesInfo });
-        console.log("onShapeDeleted callback fired");
       }
 
       // Deselect if the selected shape was deleted
@@ -1403,7 +1299,6 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
         onShapeSelected
       ) {
         onShapeSelected(null);
-        console.log("onShapeSelected callback fired after delete (deselect)");
       }
     };
 
@@ -1411,12 +1306,10 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
     useEffect(() => {
       const featureGroupInstance = featureGroupRef.current;
       if (featureGroupInstance) {
-        console.log("FeatureGroup ref is set, adding click listener");
         featureGroupInstance.on("click", onLayerClick);
 
         // Cleanup function to remove the listener when the component unmounts or ref changes
         return () => {
-          console.log("Removing click listener");
           featureGroupInstance.off("click", onLayerClick);
         };
       }
@@ -1636,28 +1529,13 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
               const features = Array.isArray(boundaryData.features)
                 ? boundaryData.features
                 : [];
-              console.log("🗺️ Map boundary filtering:", {
-                barangayName,
-                totalFeatures: features.length,
-                featureNames: features.map((f: any) => f.properties?.NAME_3),
-                normalizedBarangayName: normalizeName(barangayName || ""),
-              });
               if (barangayName && barangayName !== "N/A") {
                 const filtered = features.filter(
                   (f: any) =>
                     normalizeName(f.properties?.NAME_3 || "") ===
                     normalizeName(barangayName || ""),
                 );
-                console.log(
-                  "🎯 Filtered features:",
-                  filtered.length,
-                  "matches found",
-                );
                 if (filtered.length > 0) {
-                  console.log(
-                    "✅ Showing boundary for:",
-                    filtered[0].properties?.NAME_3,
-                  );
                   return (
                     <GeoJSON
                       key={barangayName}
@@ -1668,16 +1546,9 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                     />
                   );
                 } else {
-                  console.warn(
-                    "⚠️ No boundary features matched barangay:",
-                    barangayName,
-                  );
                 }
                 return null;
               }
-              console.log(
-                "❌ No barangayName provided or barangayName is N/A, not showing boundary",
-              );
               return null;
             })()}
 

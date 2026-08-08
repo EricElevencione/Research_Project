@@ -181,7 +181,6 @@ const TechTenantRegistry: React.FC = () => {
         const parcelsResponse = allParcelsResponses[i];
 
         if (parcelsResponse.error) {
-          console.warn(`No parcels found for record ${record.id}`);
           continue;
         }
 

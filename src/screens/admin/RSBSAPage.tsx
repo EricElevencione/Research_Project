@@ -124,14 +124,8 @@ const RsbsaAdminPage: React.FC = () => {
         throw new Error(response.error);
       }
       const data = response.data || [];
-      console.log("Received data from API:", JSON.stringify(data, null, 2));
 
       // Debug ownership types
-      console.log("Sample record ownership type:", data[0]?.ownershipType);
-      console.log(
-        "Records with ownership types:",
-        data.filter((r: { ownershipType: any }) => r.ownershipType).length,
-      );
 
       // Reformat farmer names from "Last, First, Middle, Ext" to "Last, First Middle Ext"
       const formattedData = data.map((record: RSBSARecord) => {
@@ -195,8 +189,6 @@ const RsbsaAdminPage: React.FC = () => {
 
       const formattedSubmittedDate = selectedRecord?.dateSubmitted || "N/A";
 
-      console.log("Farmer data received:", farmerData);
-      console.log("Data object for activities:", data);
 
       // Parse farming activities from the data
       const activities: string[] = [];
@@ -235,7 +227,6 @@ const RsbsaAdminPage: React.FC = () => {
         activities.push(data.mainLivelihood);
       }
 
-      console.log("Parsed activities:", activities);
       const calculateAge = (birthdate: string): number | string => {
         if (!birthdate || birthdate === "N/A") return "N/A";
         const today = new Date();

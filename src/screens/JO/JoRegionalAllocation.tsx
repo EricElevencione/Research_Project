@@ -292,7 +292,6 @@ const JoRegionalAllocation: React.FC = () => {
         });
       }
     } catch {
-      console.log("No existing allocation found");
     }
   };
 

@@ -53,7 +53,6 @@ const TechPickLandParcel: React.FC = () => {
       if (response.error) throw new Error(response.error);
 
       const data = response.data;
-      console.log("RSBSA submission API response:", data); // Log the full response
       const owner = data.find(
         (record: any) => String(record.id) === String(ownerId),
       );
@@ -67,7 +66,6 @@ const TechPickLandParcel: React.FC = () => {
           parcelArea: owner.parcelArea,
           submissionId: owner.id, // Confirm this is the correct field
         };
-        console.log("Land owner data:", ownerData); // Log owner data
         setLandOwner(ownerData);
         return ownerData;
       } else {
@@ -83,16 +81,13 @@ const TechPickLandParcel: React.FC = () => {
   // Fetch land parcels for the specific submission
   const fetchLandParcels = async (submissionId: string) => {
     try {
-      console.log("Fetching parcels for submissionId:", submissionId);
       const response = await getFarmParcels(submissionId);
-      console.log("Response status:", response.status);
 
       if (response.error) {
         throw new Error(response.error);
       }
 
       const data = response.data;
-      console.log("Raw parcels data:", data);
 
       const mappedParcels: FarmParcel[] = data
         .map((parcel: any, rawIndex: number) => ({
@@ -124,7 +119,6 @@ const TechPickLandParcel: React.FC = () => {
         }))
         .filter((parcel: FarmParcel) => parcel.ownershipTypeRegisteredOwner);
 
-      console.log("Mapped parcels:", mappedParcels);
       setLandParcels(mappedParcels);
     } catch (err: any) {
       console.error("Error fetching land parcels:", err);
@@ -138,7 +132,6 @@ const TechPickLandParcel: React.FC = () => {
       setLoading(true);
       try {
         const owner = await fetchLandOwner();
-        console.log("Fetched owner:", owner); // Debug log
         if (owner?.submissionId) {
           await fetchLandParcels(owner.submissionId);
         } else {

@@ -521,7 +521,6 @@ export const getDashboardStats = async (
       },
     };
 
-    console.log("Dashboard stats from Supabase:", dashboardStats);
     return createResponse(dashboardStats, null, 200);
   } catch (error: any) {
     console.error("Error fetching dashboard stats:", error);
@@ -1368,15 +1367,7 @@ export const getRsbsaSubmissions = async (options?: {
     };
   });
 
-  console.log(
-    "📊 Transformed RSBSA data:",
-    transformedData.length,
-    "records (filtered from",
-    data?.length,
-    ")",
-  );
   if (transformedData.length > 0) {
-    console.log("📝 Sample transformed record:", transformedData[0]);
   }
 
   return createResponse(transformedData, null, 200);
@@ -1513,10 +1504,6 @@ export const createRsbsaSubmission = async (
     }),
   };
 
-  console.log(
-    "📤 Calling register_farmer_with_parcels RPC:",
-    JSON.stringify(rpcPayload.farmlandParcels, null, 2),
-  );
 
   // Call the database function — runs as a single atomic transaction
   const { data, error } = await supabase.rpc("register_farmer_with_parcels", {
@@ -1528,7 +1515,6 @@ export const createRsbsaSubmission = async (
     return createResponse(null, error.message, 500);
   }
 
-  console.log("✅ Registration RPC result:", data);
 
   // Return in the format the frontend expects
   return createResponse(
@@ -1867,10 +1853,6 @@ export const getFarmParcels = async (
   let { data: parcels, error: parcelsError } = await parcelQuery;
 
   if (parcelsError) {
-    console.log(
-      "Farm parcels query error (non-blocking):",
-      parcelsError.message,
-    );
     return createResponse([], null, 200);
   }
 
@@ -1894,9 +1876,6 @@ export const getFarmParcels = async (
       await historyFallbackQuery;
 
     if (!historyError && historyParcels && historyParcels.length > 0) {
-      console.log(
-        `📍 No rsbsa_farm_parcels found, but found ${historyParcels.length} land_history record(s) for farmer ${submissionId}`,
-      );
       const fallbackParcels = historyParcels.map((h: any) => mapParcelToCamelCase({
         id: h.farm_parcel_id || h.id,
         submission_id: submissionId,
@@ -1953,10 +1932,6 @@ export const getFarmParcels = async (
   const { data: historyRows, error: historyRowsError } = await historyRowsQuery;
 
   if (historyRowsError) {
-    console.log(
-      "land_history parcel lookup error (non-blocking):",
-      historyRowsError.message,
-    );
   } else if (Array.isArray(historyRows)) {
     historyRows.forEach((row: any) => {
       const parcelNumber = String(row?.parcel_number ?? "").trim();
@@ -1964,9 +1939,6 @@ export const getFarmParcels = async (
       if (landParcelIdByParcelNumber[parcelNumber]) return;
 
       landParcelIdByParcelNumber[parcelNumber] = row.land_parcel_id;
-      console.log(
-        `📍 Found land_parcel_id ${row.land_parcel_id} for parcel ${parcelNumber}`,
-      );
     });
   }
 
@@ -1982,10 +1954,6 @@ export const getFarmParcels = async (
       .order("id", { ascending: true });
 
     if (landParcelRowsError) {
-      console.log(
-        "land_parcels fallback lookup error (non-blocking):",
-        landParcelRowsError.message,
-      );
     } else if (Array.isArray(landParcelRows)) {
       landParcelRows.forEach((row: any) => {
         const parcelNumber = String(row?.parcel_number ?? "").trim();
@@ -1993,9 +1961,6 @@ export const getFarmParcels = async (
         if (landParcelIdByParcelNumber[parcelNumber]) return;
 
         landParcelIdByParcelNumber[parcelNumber] = row.id;
-        console.log(
-          `📍 Found land_parcel_id ${row.id} from land_parcels for ${parcelNumber}`,
-        );
       });
     }
   }
@@ -2076,7 +2041,6 @@ export const getFarmParcelsWithOccupants = async (
     .or(`tenant_land_owner_id.eq.${farmerNumId},lessee_land_owner_id.eq.${farmerNumId}`);
 
   if (occupiedError) {
-    console.log("Occupants query error (non-blocking):", occupiedError.message);
   }
 
   const occupiedByParcels = ((occupiedByParcelsRaw as any[]) || []).filter(
@@ -2400,11 +2364,6 @@ export const syncLandPlotArea = async (
     }
 
     if (findError || !matchingPlots || matchingPlots.length === 0) {
-      console.log(
-        "syncLandPlotArea: No matching land_plots found for",
-        normalizedSubmissionId,
-        normalizedParcelNumber,
-      );
       return;
     }
 
@@ -2421,9 +2380,6 @@ export const syncLandPlotArea = async (
           updateError.message,
         );
       } else {
-        console.log(
-          `syncLandPlotArea: Updated land_plot ${plot.id} area to ${newAreaHa} ha`,
-        );
       }
     }
   } catch (error) {
@@ -2588,10 +2544,6 @@ export const getLandPlots = async (
         .in("FFRS_CODE", unresolvedFfrsCodes);
 
     if (submissionLookupError) {
-      console.log(
-        "Land plot farmer_id enrichment skipped:",
-        submissionLookupError.message,
-      );
     } else {
       const farmerIdByFfrs = new Map<string, string | number>();
       (submissionRows || []).forEach((row: any) => {
@@ -2628,10 +2580,6 @@ export const getLandPlots = async (
     );
 
   if (allParcelsError) {
-    console.warn(
-      "Land plot owner status mapping skipped:",
-      allParcelsError.message,
-    );
     return createResponse(enriched, null, 200);
   }
 
@@ -2819,14 +2767,6 @@ export const getCropPlantingInfo = async (
 
       return matches;
     })();
-    console.log(
-      "getCropPlantingInfo: filtered from",
-      ownerData?.length,
-      "to",
-      filteredOwnerData.length,
-      "results for barangay:",
-      barangay,
-    );
 
     // Build crops list helper
     const buildCropsList = (row: any): string[] => {
@@ -2948,10 +2888,6 @@ export const getCropPlantingInfo = async (
         await runIdLinkedQuery(Boolean(trimmedBarangay));
 
       if (idLinkedTenantError) {
-        console.log(
-          "ID-linked tenant lookup failed (falling back to name matching):",
-          idLinkedTenantError.message,
-        );
       } else {
         tenantParcels = idLinkedTenantParcels;
       }
@@ -2964,10 +2900,6 @@ export const getCropPlantingInfo = async (
         } = await runIdLinkedQuery(false);
 
         if (idLinkedTenantNoBarangayError) {
-          console.log(
-            "ID-linked tenant retry without barangay failed:",
-            idLinkedTenantNoBarangayError.message,
-          );
         } else {
           tenantParcels = idLinkedTenantParcelsNoBarangay;
         }
@@ -3022,10 +2954,6 @@ export const getCropPlantingInfo = async (
         await runLegacyNameQuery(Boolean(trimmedBarangay));
 
       if (legacyTenantError) {
-        console.log(
-          "Legacy name-based tenant lookup failed:",
-          legacyTenantError.message,
-        );
       } else {
         tenantParcels = legacyTenantParcels;
       }
@@ -3037,10 +2965,6 @@ export const getCropPlantingInfo = async (
         } = await runLegacyNameQuery(false);
 
         if (legacyNoBarangayError) {
-          console.log(
-            "Legacy tenant retry without barangay failed:",
-            legacyNoBarangayError.message,
-          );
         } else {
           tenantParcels = legacyTenantParcelsNoBarangay;
         }
@@ -4351,10 +4275,6 @@ export const getLandInventoryReportRows = async (
         .in("id", farmerIds);
 
       if (nameError) {
-        console.warn(
-          "Land inventory owner name lookup error (non-blocking):",
-          nameError.message,
-        );
       } else {
         (submissionRows || []).forEach((row: any) => {
           const parts = [
@@ -4379,10 +4299,6 @@ export const getLandInventoryReportRows = async (
       .eq("is_current", true);
 
     if (historyError) {
-      console.warn(
-        "Land inventory history fetch error (non-blocking):",
-        historyError.message,
-      );
     }
 
     const historyByParcelNumber = new Map<string, any>();
@@ -4411,10 +4327,6 @@ export const getLandInventoryReportRows = async (
       .order("created_at", { ascending: false });
 
     if (rsbsaError) {
-      console.warn(
-        "Land inventory rsbsa_farm_parcels fetch error (non-blocking):",
-        rsbsaError.message,
-      );
     }
 
     // Build lookup: parcel_number -> best rsbsa_farm_parcels row (most recent)
@@ -5017,7 +4929,6 @@ export const apiFetch = async (
     .replace(/^\/api\//, "");
   const parts = urlPath.split("/");
 
-  console.log("🔄 API Fetch intercepted:", { url, method, parts });
 
   // Route to appropriate Supabase function
   try {
@@ -5116,7 +5027,6 @@ export const apiFetch = async (
       if (parts.length === 2) return getUserById(parts[1]);
     }
 
-    console.warn("⚠️ Unhandled API route:", url);
     return createResponse(null, `Unhandled route: ${url}`, 404);
   } catch (error: any) {
     console.error("❌ API Fetch error:", error);

@@ -44,10 +44,6 @@ export const getCurrentUserForAudit = async (): Promise<AuditUser> => {
 
     if (error || !data) {
       // Fallback to email if lookup fails
-      console.warn(
-        "Could not fetch user for audit log, using email as fallback:",
-        error?.message,
-      );
       return {
         name: userEmail,
         role: userRole,
@@ -66,7 +62,6 @@ export const getCurrentUserForAudit = async (): Promise<AuditUser> => {
       role: data.role || userRole,
     };
   } catch (err) {
-    console.warn("getCurrentUserForAudit failed, using email fallback:", err);
     return {
       name: userEmail,
       role: userRole,

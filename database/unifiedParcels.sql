@@ -94,8 +94,8 @@ from
   and lh.is_current = true
 where
   COALESCE(p.is_current_owner, false) = true
-  or COALESCE(p.ownership_type_tenant, false) = true
-  or COALESCE(p.ownership_type_lessee, false) = true
+  or (COALESCE(p.ownership_type_tenant, false) = true and COALESCE(p.is_farming, true) = true)
+  or (COALESCE(p.ownership_type_lessee, false) = true and COALESCE(p.is_farming, true) = true)
 union
 select
   lh.id + 100000000::bigint as id,
