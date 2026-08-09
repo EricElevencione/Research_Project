@@ -112,7 +112,8 @@ SECURITY DEFINER
 AS $$
   SELECT COALESCE(
     auth.jwt() -> 'user_metadata' ->> 'role',
-    auth.jwt() -> 'app_metadata'  ->> 'role'
+    auth.jwt() -> 'app_metadata'  ->> 'role',
+    (SELECT role FROM public.users WHERE id = auth.uid())
   );
 $$;
 
