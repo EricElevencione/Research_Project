@@ -172,7 +172,6 @@ interface DeleteConfirmationState {
 
 const JoIncentives: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "open" | "closed">("all");
@@ -387,18 +386,18 @@ const JoIncentives: React.FC = () => {
 
   const visibleEditFertilizerFields = editFormData
     ? EDIT_FERTILIZER_FIELDS.filter(
-        (field) =>
-          Number((editFormData as any)[field.key]) > 0 ||
-          addedFields.has(field.key),
-      )
+      (field) =>
+        Number((editFormData as any)[field.key]) > 0 ||
+        addedFields.has(field.key),
+    )
     : [];
 
   const visibleEditSeedFields = editFormData
     ? EDIT_SEED_FIELDS.filter(
-        (field) =>
-          Number((editFormData as any)[field.key]) > 0 ||
-          addedFields.has(field.key),
-      )
+      (field) =>
+        Number((editFormData as any)[field.key]) > 0 ||
+        addedFields.has(field.key),
+    )
     : [];
 
   const addFieldToEdit = (key: string) => {
@@ -450,8 +449,8 @@ const JoIncentives: React.FC = () => {
     if (requestCount > 0) {
       const confirmed = window.confirm(
         `⚠️ Warning: This allocation has ${requestCount} existing farmer request(s).\n\n` +
-          `Editing this allocation may affect these requests.\n\n` +
-          `Do you want to proceed?`,
+        `Editing this allocation may affect these requests.\n\n` +
+        `Do you want to proceed?`,
       );
       if (!confirmed) return;
     }
@@ -572,7 +571,7 @@ const JoIncentives: React.FC = () => {
               />
               <span style={{ position: 'absolute', left: '0.8rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
             </div>
-            
+
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
@@ -693,14 +692,14 @@ const JoIncentives: React.FC = () => {
                             <button
                               onClick={() => navigate(`/jo-add-farmer-request/${allocation.id}`)}
                               disabled={(allocation as any).status === "closed"}
-                              style={{ 
-                                padding: '0.4rem 0.8rem', 
-                                background: '#10b981', 
-                                color: '#fff', 
-                                border: 'none', 
-                                borderRadius: '6px', 
-                                fontSize: '0.85rem', 
-                                fontWeight: 600, 
+                              style={{
+                                padding: '0.4rem 0.8rem',
+                                background: '#10b981',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
                                 cursor: (allocation as any).status === "closed" ? "not-allowed" : "pointer",
                                 opacity: (allocation as any).status === "closed" ? 0.5 : 1
                               }}
@@ -795,8 +794,8 @@ const JoIncentives: React.FC = () => {
                               value={
                                 editFormData.allocation_date
                                   ? new Date(
-                                      editFormData.allocation_date,
-                                    ).getMonth()
+                                    editFormData.allocation_date,
+                                  ).getMonth()
                                   : new Date().getMonth()
                               }
                               onChange={(e) =>
@@ -823,8 +822,8 @@ const JoIncentives: React.FC = () => {
                               value={
                                 editFormData.allocation_date
                                   ? new Date(
-                                      editFormData.allocation_date,
-                                    ).getDate()
+                                    editFormData.allocation_date,
+                                  ).getDate()
                                   : new Date().getDate()
                               }
                               onChange={(e) =>
@@ -846,8 +845,8 @@ const JoIncentives: React.FC = () => {
                               value={
                                 editFormData.allocation_date
                                   ? new Date(
-                                      editFormData.allocation_date,
-                                    ).getFullYear()
+                                    editFormData.allocation_date,
+                                  ).getFullYear()
                                   : new Date().getFullYear()
                               }
                               onChange={(e) =>
@@ -982,7 +981,7 @@ const JoIncentives: React.FC = () => {
                                         min="0"
                                         step={
                                           field.key.includes("liters") ||
-                                          field.key.includes("kg")
+                                            field.key.includes("kg")
                                             ? "0.01"
                                             : "1"
                                         }
